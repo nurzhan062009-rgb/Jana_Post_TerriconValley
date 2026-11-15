@@ -1,0 +1,59 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1a9114"><title>Пакетная обработка — Jana Address</title>
+<script>(function(){try{var t=localStorage.getItem('jp_theme'),a=localStorage.getItem('jp_accent');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;if(a&&a!=='green')document.documentElement.dataset.accent=a;}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/site.css"></head><body>
+<div id="hdr"></div>
+<main><section class="sec" style="padding-top:36px"><div class="container">
+<div class="pagehead" style="padding-top:0"><h1 data-i18n="bt_h">Пакетная обработка</h1>
+<p class="lead" data-i18n="bt_lead">Загрузите JSON-файл со списком адресов, проверьте разбор и исправьте записи, в которых система не уверена.</p></div>
+<div class="drop" id="drop" tabindex="0" role="button" data-i18n-aria="bt_drop"><strong data-i18n="bt_drop">Перетащите JSON-файл сюда</strong><p data-i18n="bt_drop2">Формат: список объектов с полями id и raw_address</p>
+<div class="row" style="justify-content:center"><button class="btn" id="pick" type="button" data-i18n="bt_pick">Выбрать файл</button><button class="btn ghost" id="demo" type="button" data-i18n="bt_demo">Показать пример</button></div>
+<input type="file" id="file" accept=".json,application/json" hidden></div>
+<div id="res" style="display:none">
+<div class="stats" style="margin-top:26px"><div class="stat"><b id="sT">0</b><span data-i18n="st_rec">записей</span></div><div class="stat"><b id="sL">0</b><span data-i18n="st_low">требуют проверки</span></div><div class="stat"><b id="sA">0%</b><span data-i18n="st_conf">средняя уверенность</span></div><div class="stat"><b id="sE">0</b><span data-i18n="st_fix">исправлено вручную</span></div></div>
+<div class="toolbar"><div class="row"><div class="seg" role="group" aria-label="Фильтр"><button type="button" data-f="low" aria-pressed="true" data-i18n="f_low">Требуют проверки</button><button type="button" data-f="all" aria-pressed="false" data-i18n="f_all">Все записи</button></div><label class="sr" for="srch" data-i18n="bt_search">Поиск по адресу</label><input class="search" id="srch" type="search" data-i18n-ph="bt_search" placeholder="Поиск по адресу"></div>
+<div class="row"><a class="btn ghost" href="map.html" data-i18n="bt_showmap">Показать на карте</a><button class="btn" id="exp" type="button" data-i18n="bt_exp">Скачать JSON</button></div></div>
+<div class="wrap"><table><thead><tr><th data-i18n="th_raw">Исходная строка</th><th data-i18n="th_prov">Область</th><th data-i18n="th_city">Город</th><th data-i18n="th_dist">Район</th><th data-i18n="th_street">Улица</th><th data-i18n="th_house">Дом</th><th data-i18n="th_apt">Кв.</th><th data-i18n="th_ent">Подъезд</th><th data-i18n="th_flr">Этаж</th><th data-i18n="th_conf">Уверенность</th></tr></thead><tbody id="body"></tbody></table></div>
+</div></div></section></main>
+<aside id="panel" aria-label="Правка записи"><h2 style="font-size:22px;margin:0" data-i18n="pn_h">Проверка записи</h2><div class="rawbox" id="pRaw"></div><div id="pConf"></div><div id="pSug"></div><form id="form" onsubmit="return false"></form>
+<div class="row" style="margin-top:18px"><button class="btn" id="save" type="button" data-i18n="bt_save">Сохранить</button><button class="btn ghost" id="saveNext" type="button" data-i18n="bt_savenext">Сохранить и дальше</button><button class="btn ghost" id="close" type="button" data-i18n="bt_close">Закрыть</button></div></aside>
+<div id="ftr"></div>
+<script src="assets/i18n.js"></script><script src="assets/geo.js"></script><script src="assets/streets.js"></script><script src="assets/parser.js"></script><script src="assets/geocode.js"></script><script src="assets/site.js?v=offline-map-in-header"></script>
+<script>
+const $=id=>document.getElementById(id),{esc,FIELDS,LOW}=JP,t=JP.t;let rows=[],filter='low',cur=0,term='';
+const low=r=>(r.confidence||0)<LOW,cell=v=>v==null||v===''?'<span class="null">—</span>':esc(v);
+const persist=()=>JP.store.set(rows);
+async function load(list){const x=await JP.parse(list);rows=x.rows.map(r=>({...r,_e:false}));persist();if(x.demo)JP.toast(`${t('demo_fb')}: ${x.error}`);draw()}
+function draw(){$('res').style.display='block';$('sT').textContent=rows.length;$('sL').textContent=rows.filter(low).length;
+ $('sA').textContent=rows.length?Math.round(rows.reduce((a,r)=>a+(r.confidence||0),0)/rows.length*100)+'%':'0%';$('sE').textContent=rows.filter(r=>r._e).length;
+ const q=term.toLowerCase();
+ const s=rows.filter(r=>(filter==='all'||low(r))&&(!q||String(r.raw_address).toLowerCase().includes(q))).sort((a,b)=>filter==='low'?(a.confidence||0)-(b.confidence||0):0);
+ $('body').innerHTML=s.length?s.map(r=>`<tr tabindex="0" data-i="${rows.indexOf(r)}" class="${low(r)?'low':''}"><td class="raw">${esc(r.raw_address)}${r.current_address?`<div class="note current-address">${esc(t('current_addr'))} ${esc(r.current_address.display)}</div>`:''}${r._e?`<div class="edited">${esc(t('edited'))}</div>`:''}</td><td>${cell(r.province)}</td><td>${cell(r.city)}</td><td>${cell(r.district)}</td><td>${cell([r.street_type,r.street_name].filter(Boolean).join(' '))}</td><td>${cell(r.house)}</td><td>${cell(r.apartment)}</td><td>${cell(r.entrance)}</td><td>${cell(r.floor)}</td><td><span class="conf ${low(r)?'low':''}">${Math.round((r.confidence||0)*100)}%</span></td></tr>`).join(''):`<tr><td colspan="10" style="text-align:center;padding:26px;color:var(--muted)">${esc(rows.length?t('no_found'):t('no_rows'))}</td></tr>`}
+function open(i){cur=i;const r=rows[i];$('pRaw').textContent=r.raw_address;
+ $('pConf').innerHTML=`<span class="conf ${low(r)?'low':''}">${Math.round((r.confidence||0)*100)}%</span> <span class="note">${esc(low(r)?t('conf_low'):t('conf_ok'))}</span>`;
+ $('pSug').innerHTML=(r.suggestions||[]).map((s,j)=>`<div class="sug"><b>${esc(t('sug_t'))}</b> ${esc(s.text)}<br><button class="btn ghost sm" style="margin-top:8px" data-j="${j}" type="button">${esc(t('sug_apply'))}</button></div>`).join('');
+ $('form').innerHTML='<div class="grid2">'+FIELDS.map(([k,l])=>`<div><label for="f_${k}">${esc(l)}</label><input id="f_${k}" value="${r[k]==null?'':esc(r[k])}"></div>`).join('')+'</div>';
+ $('panel').classList.add('open');$('f_province').focus()}
+function nextLow(){const n=rows.map((r,i)=>[r,i]).filter(([r,i])=>low(r)&&i!==cur).sort((a,b)=>a[0].confidence-b[0].confidence)[0];return n?n[1]:-1}
+$('pSug').onclick=e=>{const b=e.target.closest('[data-j]');if(b){const p=rows[cur].suggestions[b.dataset.j].patch;for(const k in p)$('f_'+k).value=p[k]}};
+$('body').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)open(+tr.dataset.i)};
+$('body').onkeydown=e=>{if(e.key==='Enter'){const tr=e.target.closest('tr[data-i]');if(tr)open(+tr.dataset.i)}};
+function save(){const r=rows[cur],before={city:r.city,street_type:r.street_type,street_name:r.street_name};FIELDS.forEach(([k])=>{const v=$('f_'+k).value.trim();r[k]=v===''?null:v});if(r.current_address){if(['city','street_type','street_name'].some(k=>before[k]!==r[k]))delete r.current_address;else{Object.assign(r.current_address,{house:r.house,apartment:r.apartment,entrance:r.entrance,floor:r.floor});const a=r.current_address;a.display=[a.city,[a.street_type,a.street_name].filter(Boolean).join(' '),a.house?`дом ${a.house}`:null,a.apartment?`кв. ${a.apartment}`:null,a.entrance?`подъезд ${a.entrance}`:null,a.floor?`этаж ${a.floor}`:null].filter(Boolean).join(', ')}}r.confidence=1;r._e=true;delete r.suggestions;persist();draw();JP.toast(t('saved_ok'))}
+$('save').onclick=()=>{save();$('panel').classList.remove('open')};
+$('saveNext').onclick=()=>{save();const n=nextLow();if(n>=0)open(n);else{$('panel').classList.remove('open');JP.toast(t('all_done'))}};
+$('close').onclick=()=>$('panel').classList.remove('open');
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('panel').classList.remove('open')});
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{filter=b.dataset.f;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));draw()});
+$('srch').oninput=e=>{term=e.target.value.trim();draw()};
+$('exp').onclick=()=>{if(!rows.length){JP.toast(t('no_exp'));return}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(rows.map(({_e,suggestions,...r})=>r),null,2)],{type:'application/json'}));a.download='jana_address_result.json';a.click()};
+function readF(f){const fr=new FileReader();fr.onload=()=>{try{const d=JSON.parse(fr.result);if(!Array.isArray(d)||!d.every(x=>x&&typeof x.raw_address==='string'))throw 0;load(d.map((x,i)=>({id:x.id||'rec_'+i,raw_address:x.raw_address})))}catch(e){JP.toast(t('bad_file'))}};fr.readAsText(f)}
+$('pick').onclick=e=>{e.stopPropagation();$('file').click()};$('drop').onclick=()=>$('file').click();
+$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
+$('file').onchange=e=>e.target.files[0]&&readF(e.target.files[0]);
+$('demo').onclick=e=>{e.stopPropagation();load(JP.sampleList())};
+['dragover','dragenter'].forEach(v=>$('drop').addEventListener(v,e=>{e.preventDefault();$('drop').classList.add('over')}));
+['dragleave','drop'].forEach(v=>$('drop').addEventListener(v,e=>{e.preventDefault();$('drop').classList.remove('over')}));
+$('drop').addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)readF(f)});
+// восстановление данных между страницами (карта, ассистент)
+const saved=JP.store.get();if(saved.length){rows=saved;draw();const eid=new URLSearchParams(location.search).get('edit');if(eid){const i=rows.findIndex(r=>r.id===eid);if(i>=0){filter='all';document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f==='all'));draw();open(i)}}}
+</script>
+<script src="assets/jarvis.js"></script></body></html>

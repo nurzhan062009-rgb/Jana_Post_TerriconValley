@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1a9114"><title>Jana Address — Jana Post</title>
+<script>(function(){try{var t=localStorage.getItem('jp_theme'),a=localStorage.getItem('jp_accent');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;if(a&&a!=='green')document.documentElement.dataset.accent=a;}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/site.css"></head><body>
+<div id="hdr"></div>
+<main>
+<section class="hero"><div class="container hero-grid">
+<div>
+<h1 data-i18n="hero_h">Адрес одной строкой превращается в точные поля</h1>
+<p class="lead" data-i18n="hero_p">Jana Address разбирает адрес доставки, который клиент написал как удобно: область, город, район, улица, дом, квартира, подъезд, этаж. Курьеру больше не нужно уточнять детали по телефону.</p>
+<div class="row"><a class="btn" href="check.html" data-i18n="b_check">Проверить адрес</a><a class="btn ghost" href="batch.html" data-i18n="b_file">Загрузить файл</a><a class="btn ghost" href="map.html" data-i18n="b_map">????? ???????</a></div>
+</div>
+<div class="live" aria-label="Пример разбора">
+<div class="raw" id="lvRaw" aria-live="off"></div>
+<div class="tags" id="lvTags"></div>
+<p class="cap" data-i18n="live_cap">Так система читает реальные строки из базы. Нажмите «Проверить адрес» и попробуйте свою.</p>
+</div>
+</div></section>
+
+<section class="sec"><div class="container">
+<h2 data-i18n="how_h">Как это работает</h2>
+<ol class="steps">
+<li><h3 data-i18n="s1t">Разбор</h3><p data-i18n="s1p">Каждая запись превращается в отдельные поля с уровнем уверенности.</p></li>
+<li><h3 data-i18n="s2t">Справочник</h3><p data-i18n="s2p">Район и жилой массив восстанавливаются по собственному справочнику.</p></li>
+<li><h3 data-i18n="s3t">Проверка</h3><p data-i18n="s3p">Неуверенные записи подсвечены. Их можно поправить вручную в таблице.</p></li>
+<li><h3 data-i18n="s4t">Запуск</h3><p data-i18n="s4p">Один docker compose up. Работает автономно, без сети.</p></li>
+</ol></div></section>
+
+<section class="sec tint"><div class="container">
+<h2 data-i18n="in_h">Что внутри</h2>
+<div class="cards">
+<a class="card" href="check.html"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><h3 data-i18n="c1t">Проверка адреса</h3><p data-i18n="c1p">Введите одну строку и сразу получите разбор, уровень уверенности и подсказку «Возможно, вы имели в виду».</p></a>
+<a class="card" href="batch.html"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg></div><h3 data-i18n="c2t">Пакетная обработка</h3><p data-i18n="c2p">Загрузите файл, посмотрите разбор и вручную поправьте записи, в которых система не уверена.</p></a>
+<a class="card" href="map.html"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></div><h3 data-i18n="c3t">Карта адресов</h3><p data-i18n="c3p">Offline map of Kazakhstan with Jana Post points and address search.</p></a>
+<a class="card" href="account.html"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div><h3 data-i18n="c4t">Личный кабинет</h3><p data-i18n="c4p">Заказы, отслеживание посылок, сохранённые адреса, темы и язык интерфейса — всё в одном месте.</p></a>
+<div class="card"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div><h3 data-i18n="c5t">Элизабет</h3><p data-i18n="c5p">Ассистент внутри сервиса: говорит женским голосом или работает в режиме «только текст». Нажмите круглую кнопку справа внизу или скажите «Элизабет».</p></div>
+</div></div></section>
+
+<section class="sec"><div class="container">
+<div class="stats"><div class="stat"><b>3+ млн</b><span data-i18n="st1">пользователей Jana Post</span></div><div class="stat"><b>1000+</b><span data-i18n="st2">филиалов</span></div><div class="stat"><b>5</b><span data-i18n="st3">стран</span></div><div class="stat"><b>5 мин</b><span data-i18n="st4">на 1000 адресов</span></div></div>
+<div class="cta" style="margin-top:36px"><div><h2 data-i18n="cta_h">Попробуйте на своих данных</h2><p data-i18n="cta_p">Загрузите JSON со списком адресов или нажмите «Показать пример» на странице пакетной обработки.</p></div><div class="row"><a class="btn" href="batch.html" data-i18n="cta_b1">Загрузить файл</a><a class="btn ghost" href="check.html" data-i18n="cta_b2">Ввести адрес</a></div></div>
+</div></section>
+</main>
+<div id="ftr"></div>
+<script src="assets/i18n.js"></script><script src="assets/geo.js"></script><script src="assets/streets.js"></script><script src="assets/parser.js"></script><script src="assets/geocode.js"></script><script src="assets/site.js?v=offline-map-in-header"></script>
+<script>
+(function(){
+const raw=document.getElementById('lvRaw'),tags=document.getElementById('lvTags');
+const ex=JP.DEMO.filter(d=>d.id!=='rec_00420');let i=0;const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const fmt=r=>JP.FIELDS.map(([k,l])=>[k,l,r[k]]).filter(x=>x[2]).map(([k,l,v])=>`<span class="tag"><small>${JP.esc(l)}</small><b>${JP.esc(v)}</b></span>`).join('')+`<span class="tag"><small>${JP.esc(JP.t('g_conf'))}</small><b>${Math.round(r.confidence*100)}%</b></span>`;
+function show(r){raw.textContent=r.raw_address;tags.innerHTML=fmt(r)}
+function type(r){let n=0;tags.innerHTML='';const t=setInterval(()=>{n+=2;raw.textContent=r.raw_address.slice(0,n);if(n>=r.raw_address.length){clearInterval(t);tags.innerHTML=fmt(r);setTimeout(()=>{i=(i+1)%ex.length;type(ex[i])},4200)}},38)}
+reduce?show(ex[0]):type(ex[0]);
+})();
+</script>
+<script src="assets/jarvis.js"></script></body></html>

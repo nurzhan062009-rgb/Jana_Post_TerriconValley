@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a9114">
+<title>Офлайн-карта — Jana Address</title>
+<script>(function(){try{var t=localStorage.getItem('jp_theme'),a=localStorage.getItem('jp_accent');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;if(a&&a!=='green')document.documentElement.dataset.accent=a;}catch(e){}})();</script>
+<link rel="manifest" href="/manifest.json">
+<link rel="stylesheet" href="/vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/site.css">
+<style>
+/* Страница карты: только общие токены из site.css (--green, --surface, --line, --tint …), без собственной палитры */
+body.mapbody{height:100vh;overflow:hidden}
+.mp{flex:1;min-height:0;display:grid;grid-template-columns:380px minmax(0,1fr);gap:16px;padding:16px}
+.mp .side{max-height:none;min-height:0;height:100%;overflow:hidden}
+.mp-head{padding:20px 18px 16px;border-bottom:1px solid var(--line);position:relative}
+.mp-head h1{font-size:clamp(22px,2.1vw,28px);line-height:1.1;letter-spacing:-.6px;margin:10px 0 8px}
+.mp-intro{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.5}
+.search-wrap{position:relative}
+.search-wrap>svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--green);pointer-events:none}
+#q{padding-left:41px;font-size:15px}
+#q::placeholder{color:var(--muted)}
+#q::-webkit-search-cancel-button{filter:grayscale(1)}
+#results{position:absolute;top:calc(100% + 6px);left:0;right:0;max-height:300px;overflow:auto;z-index:30;margin:0;padding:0;list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+#results[hidden]{display:none}
+#results li+li{border-top:1px solid var(--line)}
+#results button{display:block;width:100%;padding:10px 13px;text-align:left;font:inherit;font-size:14px;border:0;background:none;color:var(--ink);cursor:pointer}
+#results button:hover,#results button:focus-visible{background:var(--tint)}
+#results small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+.mp-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.mp-toggle{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer}
+.mp-toggle input{width:auto;padding:0;accent-color:var(--green)}
+.mp-count{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:var(--tint2);color:var(--deep);font-weight:700;font-size:14px}
+.mp-warn{margin:10px 0 0;padding:9px 12px;border-radius:10px;background:var(--warnbg);color:var(--warn);font-size:12.5px;line-height:1.4}
+.mp-lh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px 6px}
+.mp-lh span{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.city-list{flex:1;min-height:0;overflow:auto;padding:0 8px 12px;scrollbar-color:var(--line) transparent}
+.city{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;padding:10px 12px;border:0;border-radius:10px;background:none;text-align:left;font:inherit;color:var(--ink);cursor:pointer}
+.city:hover{background:var(--tint)}
+.city[aria-expanded=true]{background:var(--tint2);color:var(--deep)}
+.city-name{font-weight:700}
+.city-count{font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;background:var(--tint2);color:var(--deep);white-space:nowrap}
+.city[aria-expanded=true] .city-count{background:var(--green);color:#fff}
+.city-points{margin:2px 0 8px 14px;padding-left:10px;border-left:2px solid var(--line)}
+.city-points[hidden]{display:none}
+.point-row{display:grid;grid-template-columns:10px minmax(0,1fr);gap:10px;width:100%;padding:8px 8px;border:0;border-radius:9px;background:none;text-align:left;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+.point-row:hover{background:var(--tint);color:var(--deep)}
+.point-row small{display:block;color:var(--muted);font-size:12px}
+.dot{width:10px;height:10px;margin-top:5px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 22%,transparent)}
+.dot.locker{background:#2f7fe0;box-shadow:0 0 0 3px color-mix(in srgb,#2f7fe0 24%,transparent)}
+/* карта */
+.mp .stage{height:auto;min-height:0;min-width:0}
+#map{position:absolute;inset:0;background:var(--tint)}
+.mp-status{position:absolute;left:60px;top:12px;z-index:5;max-width:min(520px,calc(100% - 72px));padding:9px 14px;border:1px solid var(--line);border-left:3px solid var(--green);border-radius:11px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);color:var(--ink);font-size:13px;box-shadow:var(--shadow)}
+.mp-status[hidden]{display:none}
+.mp .zoom{z-index:5}
+.mp .zoom button:hover{color:var(--deep)}
+.mp .legend{z-index:5;bottom:12px;gap:6px}
+.mp .legend span{display:flex;align-items:center}
+.mp .legend i{margin-right:8px;border:2px solid var(--surface)}
+.mp .legend i.lg-g{background:var(--green);box-shadow:0 0 0 1px var(--green)}
+.mp .legend i.lg-b{background:#2f7fe0;box-shadow:0 0 0 1px #2f7fe0}
+.mp .legend i.lg-c{width:16px;height:16px;border:2px solid var(--green);background:#12201a;margin-right:5px;margin-left:-2px}
+.mp .legend .muted{font-size:12px}
+/* MapLibre: контролы и попап в стиле приложения */
+.maplibregl-ctrl-attrib{background:color-mix(in srgb,var(--surface) 85%,transparent)!important;color:var(--muted)!important;font:10.5px var(--font)!important;border-radius:8px 0 0 0}
+.maplibregl-ctrl-attrib a{color:var(--deep)!important}
+.maplibregl-ctrl-attrib-button{filter:none}
+html[data-theme=dark] .maplibregl-ctrl-attrib-button,html:not([data-theme=light]) .maplibregl-ctrl-attrib-button{background-color:transparent}
+.maplibregl-popup{font-family:var(--font)}
+.maplibregl-popup-content{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px;min-width:240px}
+.maplibregl-popup-close-button{color:var(--muted);font-size:20px;line-height:1;padding:3px 10px;border-radius:0 13px 0 9px}
+.maplibregl-popup-close-button:hover{background:var(--tint2);color:var(--ink)}
+[class*=maplibregl-popup-anchor-top] .maplibregl-popup-tip{border-bottom-color:var(--surface)}
+[class*=maplibregl-popup-anchor-bottom] .maplibregl-popup-tip{border-top-color:var(--surface)}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip{border-right-color:var(--surface)}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip{border-left-color:var(--surface)}
+.jpp .ttl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 18px 2px 0}
+.jpp .ttl b{font-size:15px}
+.jpp .btn{width:100%;justify-content:center;margin-top:6px}
+@media(min-width:901px){.maplibregl-ctrl-bottom-right{right:66px}}
+@media(max-width:900px){
+ body.mapbody{height:auto;overflow:visible}
+ .mp{display:flex;flex-direction:column;padding:12px;gap:12px}
+ .mp .stage{order:-1;height:56vh;min-height:340px;flex:none}
+ .mp .side{height:auto}
+ .city-list{max-height:380px;flex:none}
+ .mp-status{max-width:calc(100% - 72px);font-size:12.5px}
+ .mp .legend{max-width:calc(100% - 130px)}.mp .legend .muted{display:none}.mp .legend span:has(.lg-c){display:none}
+}
+</style>
+</head>
+<body class="mapbody">
+<div id="hdr"></div>
+<main class="mp">
+  <aside class="side" aria-label="Поиск и список пунктов">
+    <div class="mp-head">
+      <span class="badge">Офлайн · Казахстан</span>
+      <h1>Пункты Jana Post на карте</h1>
+      <p class="mp-intro">Офлайн-карта с пунктами выдачи. Найдите филиал по городу или адресу и нажмите на точку, чтобы увидеть подробности.</p>
+      <div class="search-wrap">
+        <label for="q" class="sr">Поиск пункта выдачи или адреса</label>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Город, улица, адрес пункта…" autocomplete="off">
+        <ul id="results" hidden></ul>
+      </div>
+      <div class="mp-tools">
+        <label class="mp-toggle"><input id="show-points" type="checkbox" checked> Пункты выдачи</label>
+        <button id="route-button" type="button" class="btn ghost sm">Маршрут сюда</button>
+      </div>
+      <div id="count" class="mp-count" role="status">Загружаем пункты выдачи…</div>
+      <p class="mp-warn">Все 290 точек загружены из демонстрационного списка проекта. Это не подтверждённый официальный справочник Jana Post.</p>
+    </div>
+    <div class="mp-lh"><span>Города и пункты</span><button id="show-kz" type="button" class="btn ghost sm">Весь Казахстан</button></div>
+    <div id="city-list" class="city-list" aria-label="Пункты выдачи по городам"></div>
+  </aside>
+  <section class="stage">
+    <div id="map" role="application" aria-label="Офлайн-карта Казахстана со всеми пунктами Jana Post"></div>
+    <div class="zoom"><button id="zoom-in" type="button" aria-label="Приблизить">+</button><button id="zoom-out" type="button" aria-label="Отдалить">−</button></div>
+    <div id="status" class="mp-status" role="status" aria-live="polite">Загружаем офлайн-карту…</div>
+    <div class="legend"><span><i class="lg-g"></i>Филиал Jana Post</span><span><i class="lg-b"></i>Постамат</span><span><i class="lg-c"></i><span class="muted">Круг с числом — несколько точек</span></span></div>
+  </section>
+</main>
+<script src="/vendor/maplibre-gl.js"></script>
+<script src="/vendor/pmtiles.js"></script>
+<script src="assets/i18n.js"></script><script src="assets/geo.js"></script><script src="assets/streets.js"></script><script src="assets/parser.js"></script><script src="assets/geocode.js"></script><script src="assets/site.js?v=offline-map-in-header"></script>
+<script src="/assets/branches.js"></script>
+<script>
+'use strict';
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme:dark)').matches};
+const BLUE='#2f7fe0';
+function palette(){
+ const green=cssv('--green')||'#1a9114';
+ return isDark()
+  ?{land:'#0f1913',water:'#0c2230',park:'#15291b',building:'#1b2b21',road:'#33493a',roadLabel:'#a9bcae',halo:'#0e1611',place:'#e8f1e6',house:'#f0a35a',ring:cssv('--ink')||'#e8f1e6',blue:'#4da3ff',green,rasterMax:.42,rasterSat:-.65}
+  :{land:'#eef3ec',water:'#b9d9e8',park:'#d3e8c9',building:'#dde7da',road:'#ffffff',roadLabel:'#33453a',halo:'#ffffff',place:'#14231a',house:'#a84a05',ring:'#ffffff',blue:BLUE,green,rasterMax:1,rasterSat:0};
+}
+const CFG={tiles:'/data/kazakhstan.pmtiles',glyphs:'/fonts/{fontstack}/{range}.pbf',center:[69,48],route:'/valhalla/route'};
+const $=id=>document.getElementById(id),status=$('status');
+const branches=Array.isArray(window.JPBRANCHES)?window.JPBRANCHES.filter(b=>Number.isFinite(b.lat)&&Number.isFinite(b.lon)): [];
+const norm=value=>String(value??'').toLocaleLowerCase('ru').replace(/ё/g,'е').trim();
+const grouped=branches.reduce((groups,b)=>{(groups[b.city]??=[]).push(b);return groups},Object.create(null));
+const cities=Object.entries(grouped);
+let map,routeTarget=null,destinationMarker=null,routeStartMarker=null,searchTimer,searchRequest=0;
+function setStatus(text){status.textContent=text;status.hidden=!text}
+const addressSelectedStatus='\u0410\u0434\u0440\u0435\u0441 \u043d\u0430\u0439\u0434\u0435\u043d \u0438 \u043e\u0442\u043c\u0435\u0447\u0435\u043d \u043d\u0430 \u043a\u0430\u0440\u0442\u0435.';
+const normalizeMapText=value=>String(value||'').normalize('NFKC').toLocaleLowerCase('ru').replace(/ё/g,'е').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/gu,' ');
+function mapStreetName(feature){
+ const properties=feature?.properties||{};
+ return [...new Set([properties.name,properties['name:ru'],properties['name:kk'],properties.name_ru,properties.name_kk]
+  .filter(Boolean).flatMap(value=>String(value).split(/[\/|;]/u))
+  .map(part=>normalizeMapText(part).replace(/^(?:улица|ул|street|st|проспект|пр-т|пр|avenue|ave)\s+/u,'')).filter(Boolean))];
+}
+function featurePoints(feature){
+ const geometry=feature?.geometry;if(!geometry)return[];
+ const walk=value=>Array.isArray(value)&&typeof value[0]==='number'&&typeof value[1]==='number'?[value]:Array.isArray(value)?value.flatMap(walk):[];
+ return walk(geometry.coordinates);
+}
+function distanceMeters(a,b){
+ const latitude=(a[1]+b[1])*Math.PI/360,dx=(a[0]-b[0])*111320*Math.cos(latitude),dy=(a[1]-b[1])*110540;
+ return Math.hypot(dx,dy);
+}
+function waitForMapIdle(timeout=900){return new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(timer);map.off('idle',finish);resolve()};const timer=setTimeout(finish,timeout);map.once('idle',finish)})}
+async function searchOfflineMap(address,requestId){
+ const target=address?.current_address||address;
+ if(!target?.street_name||!map?.isStyleLoaded()||!map.getLayer('road-label'))return[];
+ const wanted=normalizeMapText(target.street_name),city=target.city||address.city;
+ if(!wanted)return[];
+ const cityPoints=city?branches.filter(point=>normalizeMapText(point.city)===normalizeMapText(city)):[];
+ const center=cityPoints.length?cityPoints.reduce((sum,point)=>[sum[0]+point.lon/cityPoints.length,sum[1]+point.lat/cityPoints.length],[0,0]):[map.getCenter().lng,map.getCenter().lat];
+ map.jumpTo({center,zoom:13});await waitForMapIdle();if(requestId!==searchRequest)return[];
+ const roads=map.querySourceFeatures('basemap',{sourceLayer:'transportation_name'}).filter(feature=>mapStreetName(feature).includes(wanted));
+ const anchors=roads.flatMap(feature=>featurePoints(feature).map(coordinate=>({coordinate,feature})))
+  .sort((a,b)=>distanceMeters(a.coordinate,center)-distanceMeters(b.coordinate,center)).slice(0,6);
+ if(!target.house){
+  const seen=new Set();
+  return anchors.filter(anchor=>{
+   const key=anchor.coordinate.map(value=>value.toFixed(5)).join(',');
+   if(seen.has(key))return false;seen.add(key);return true;
+  }).slice(0,8).map(anchor=>({type:'Feature',geometry:{type:'Point',coordinates:anchor.coordinate},properties:{street:target.street_name,city,label:[city,target.street_type,target.street_name].filter(Boolean).join(', ')}}));
+ }
+ if(!map.getLayer('house-number'))return[];
+ for(const anchor of anchors){
+  if(requestId!==searchRequest)return[];
+  map.jumpTo({center:anchor.coordinate,zoom:17});await waitForMapIdle();
+  const localRoads=map.querySourceFeatures('basemap',{sourceLayer:'transportation_name'}).filter(feature=>mapStreetName(feature).includes(wanted));
+  const localHouses=map.querySourceFeatures('basemap',{sourceLayer:'housenumber'}).filter(feature=>normalizeMapText(feature.properties?.housenumber)===normalizeMapText(target.house));
+  let best=null,bestDistance=Infinity;
+  for(const house of localHouses){
+   const point=featurePoints(house)[0];if(!point)continue;
+   for(const road of localRoads){for(const roadPoint of featurePoints(road)){const distance=distanceMeters(point,roadPoint);if(distance<bestDistance){best=house;bestDistance=distance}}}
+  }
+  if(best&&bestDistance<=180){
+   const coordinates=featurePoints(best)[0],current=address.current_address;
+   const oldLabel=[address.street_type,address.street_name,address.house].filter(Boolean).join(' ');
+   const newLabel=[target.city,target.street_type,target.street_name,target.house].filter(Boolean).join(', ');
+   return[{type:'Feature',geometry:{type:'Point',coordinates},properties:{housenumber:target.house,street:target.street_name,city:target.city||address.city,label:newLabel,addressMatch:current?`${oldLabel} → ${newLabel}`:null}}];
+  }
+ }
+ return[];
+}
+function branchFeature(b){return{type:'Feature',geometry:{type:'Point',coordinates:[b.lon,b.lat]},properties:{id:String(b.id),name:b.name,type:b.type,city:b.city,addr:b.addr,hours:b.hours}}}
+function pointBounds(points){const bounds=new maplibregl.LngLatBounds();for(const p of points)bounds.extend([p.lon,p.lat]);return bounds}
+function mapPadding(){return{top:60,right:60,bottom:60,left:20}}
+function flyToBounds(points){if(!points.length)return;map.fitBounds(pointBounds(points),{padding:mapPadding(),maxZoom:13,duration:700})}
+function makePopup(feature){
+ const p=feature.properties,content=document.createElement('div');content.className='jpp';
+ const head=document.createElement('div');head.className='ttl';
+ const title=document.createElement('b');title.textContent=p.name;head.append(title);
+ if(p.type){const badge=document.createElement('span');badge.className='badge';badge.textContent=p.type;head.append(badge)}
+ content.append(head);
+ const list=document.createElement('dl');
+ for(const [label,value] of [['Город',p.city],['Адрес',p.addr],['Часы работы',p.hours]]){
+  const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');
+  dt.textContent=label;dd.textContent=value||'не указано';row.append(dt,dd);list.append(row)
+ }
+ content.append(list);
+ const button=document.createElement('button');button.type='button';button.className='btn sm';button.textContent='Построить маршрут сюда';
+ button.addEventListener('click',()=>setDestination(feature.geometry.coordinates,`${p.name}, ${p.city}`));content.append(button);
+ return content;
+}
+function setDestination(coordinates,label){
+ routeTarget=coordinates;destinationMarker?.remove();
+ destinationMarker=new maplibregl.Marker({color:palette().green}).setLngLat(coordinates).addTo(map);
+ setStatus(`Точка назначения: ${label}. Нажмите «Маршрут сюда», чтобы построить маршрут.`);
+ map.flyTo({center:coordinates,zoom:Math.max(map.getZoom(),14),duration:650});
+}
+function featureAt(event){
+ const features=map.queryRenderedFeatures(event.point,{layers:['pickup-points']});
+ return features[0]||null;
+}
+function applyTheme(){
+ if(!map||!map.getLayer('background'))return;
+ const p=palette(),set=(layer,prop,value)=>{if(map.getLayer(layer))map.setPaintProperty(layer,prop,value)};
+ set('background','background-color',p.land);
+ set('fallback','raster-brightness-max',p.rasterMax);set('fallback','raster-saturation',p.rasterSat);
+ set('water','fill-color',p.water);set('park','fill-color',p.park);set('building','fill-color',p.building);
+ set('road','line-color',p.road);
+ set('road-label','text-color',p.roadLabel);set('road-label','text-halo-color',p.halo);
+ set('house-number','text-color',p.house);set('house-number','text-halo-color',p.halo);
+ set('place-label','text-color',p.place);set('place-label','text-halo-color',p.halo);
+ set('pickup-clusters','circle-stroke-color',p.green);
+ set('pickup-points','circle-color',['match',['get','type'],'Постамат',p.blue,p.green]);
+ set('pickup-points','circle-stroke-color',p.ring);
+ set('route-line','line-color',p.green);
+}
+function addMapLayers(){
+ map.addSource('pickup-points',{type:'geojson',data:{type:'FeatureCollection',features:branches.map(branchFeature)},cluster:true,clusterRadius:48,clusterMaxZoom:11});
+ map.addLayer({id:'pickup-clusters',type:'circle',source:'pickup-points',filter:['has','point_count'],paint:{'circle-color':'#12201a','circle-radius':['step',['get','point_count'],17,20,21,60,25],'circle-stroke-color':palette().green,'circle-stroke-width':3,'circle-opacity':.97}});
+ map.addLayer({id:'pickup-cluster-count',type:'symbol',source:'pickup-points',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-font':['Noto Sans Regular'],'text-size':12},paint:{'text-color':'#fff'}});
+ map.addLayer({id:'pickup-points',type:'circle',source:'pickup-points',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','type'],'Постамат',palette().blue,palette().green],'circle-radius':['interpolate',['linear'],['zoom'],4,5,10,7,15,10],'circle-stroke-color':palette().ring,'circle-stroke-width':2,'circle-opacity':.97}});
+ map.addSource('route',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+ map.addLayer({id:'route-line',type:'line',source:'route',paint:{'line-color':palette().green,'line-width':5,'line-opacity':.9,'line-dasharray':[1.5,1.2]}});
+ for(const layer of ['pickup-clusters','pickup-cluster-count','pickup-points'])map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');
+ for(const layer of ['pickup-clusters','pickup-cluster-count','pickup-points'])map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');
+ map.on('click','pickup-clusters',event=>{
+  const feature=map.queryRenderedFeatures(event.point,{layers:['pickup-clusters']})[0];if(!feature)return;
+  map.getSource('pickup-points').getClusterExpansionZoom(feature.properties.cluster_id,(error,zoom)=>{
+   if(error){setStatus(`Не удалось приблизить карту: ${error.message}`);return}
+   map.easeTo({center:feature.geometry.coordinates,zoom,duration:450})
+  })
+ });
+ map.on('click','pickup-points',event=>{
+  const feature=featureAt(event);if(!feature)return;
+  new maplibregl.Popup({closeButton:true,maxWidth:'300px'}).setLngLat(feature.geometry.coordinates).setDOMContent(makePopup(feature)).addTo(map)
+ });
+ map.on('click',event=>{
+  if(map.queryRenderedFeatures(event.point,{layers:['pickup-points','pickup-clusters']}).length)return;
+  setDestination([event.lngLat.lng,event.lngLat.lat],`${event.lngLat.lat.toFixed(5)}, ${event.lngLat.lng.toFixed(5)}`)
+ });
+ map.once('idle',()=>{if(branches.length)setStatus(`На карте ${branches.length} пунктов выдачи в ${cities.length} городах. Щёлкните точку или выберите город в списке.`)});
+}
+function renderCities(){
+ const list=$('city-list');list.replaceChildren();
+ cities.sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],'ru'));
+ for(const [city,points] of cities){
+  const section=document.createElement('section');
+  const button=document.createElement('button');button.type='button';button.className='city';button.setAttribute('aria-expanded','false');
+  const name=document.createElement('span');name.className='city-name';name.textContent=city;
+  const total=document.createElement('span');total.className='city-count';total.textContent=`${points.length} пунктов`;
+  button.append(name,total);
+  const sublist=document.createElement('div');sublist.className='city-points';sublist.hidden=true;
+  for(const point of points){
+   const row=document.createElement('button');row.type='button';row.className='point-row';
+   const dot=document.createElement('i');dot.className=`dot${point.type==='Постамат'?' locker':''}`;
+   const text=document.createElement('span');text.append(document.createTextNode(point.name));
+   const address=document.createElement('small');address.textContent=`${point.addr} · ${point.hours}`;text.append(address);row.append(dot,text);
+   row.addEventListener('click',()=>focusBranch(point));sublist.append(row)
+  }
+  button.addEventListener('click',()=>{
+   const open=!sublist.hidden;sublist.hidden=open;button.setAttribute('aria-expanded',String(!open));flyToBounds(points)
+  });
+  section.append(button,sublist);list.append(section)
+ }
+}
+function focusBranch(point){
+ const feature=branchFeature(point);setDestination(feature.geometry.coordinates,`${point.name}, ${point.city}`);
+ new maplibregl.Popup({closeButton:true,maxWidth:'300px'}).setLngLat(feature.geometry.coordinates).setDOMContent(makePopup(feature)).addTo(map)
+}
+function showResults(items,query,kind='local',autoSelectSingle=false){
+ const list=$('results');list.replaceChildren();
+ for(const item of items){
+  const row=document.createElement('li'),button=document.createElement('button');button.type='button';
+  const name=document.createElement('span');name.textContent=item.name||item.label||item.addr||query;
+  const detail=document.createElement('small');detail.textContent=item.addressMatch||(item.street&&!item.housenumber?`Улица из офлайн-карты${item.city?` · ${item.city}`:''}`:[item.addr,item.city,item.type].filter(Boolean).join(' · ')||item.label||'Адрес из поиска');
+  button.append(name,detail);
+  button.addEventListener('click',()=>{
+   list.hidden=true;
+   if(kind==='local')focusBranch(item);
+   else{const coordinates=item.geometry.coordinates;map.flyTo({center:coordinates,zoom:17,duration:650});setDestination(coordinates,item.label||query)}
+  });
+  row.append(button);list.append(row)
+ }
+ list.hidden=!items.length;
+ if(autoSelectSingle&&items.length===1){list.hidden=true;list.querySelector('button')?.click()}
+}
+async function searchAddress(query,requestId,autoSelectSingle=false){
+ let address=null,localAttempted=false;
+ try{
+  try{
+   const parsedResponse=await fetch('/api/parse-one',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({raw_address:query}),signal:AbortSignal.timeout(12000)});
+   if(parsedResponse.ok)address=await parsedResponse.json();
+  }catch{}
+  if(requestId!==searchRequest)return;
+  localAttempted=true;
+  const local=await searchOfflineMap(address,requestId);
+  if(requestId!==searchRequest)return;
+  if(local.length){showResults(local,query,'geocode',autoSelectSingle);setStatus('Найдено в локальной карте. Интернет не использовался. Выберите результат.');if(autoSelectSingle&&local.length===1)setStatus(addressSelectedStatus);return}
+  if(!navigator.onLine)throw new Error('В локальных тайлах не найден этот адрес. Проверьте город, улицу и номер дома.');
+  const current=address?.current_address;
+  const target=current||address;
+  const normalized=current
+   ?[current.street_type,current.street_name,current.house,current.city].filter(Boolean).join(', ')
+   :address?.street_name
+    ?[address.street_type,address.street_name,address.house,address.city||address.province,'Казахстан'].filter(Boolean).join(', ')
+    :`${query}, Казахстан`;
+  const city=current?.city||address?.city;
+  const cityPoints=city?branches.filter(point=>norm(point.city)===norm(city)):[];
+  const bias=cityPoints.length
+   ?cityPoints.reduce((sum,point)=>[sum[0]+point.lon/cityPoints.length,sum[1]+point.lat/cityPoints.length],[0,0])
+   :map.getZoom()<6?[71.43,51.13]:[map.getCenter().lng,map.getCenter().lat];
+  const response=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(normalized)}&lat=${bias[1]}&lon=${bias[0]}&limit=8&lang=default`,{signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw new Error(`Поиск вернул HTTP ${response.status}.`);
+  const data=await response.json();if(requestId!==searchRequest)return;
+  const oldLabel=current?[address.street_type,address.street_name,address.house].filter(Boolean).join(' '):'';
+  const newLabel=current?[current.city,current.street_type,current.street_name,current.house].filter(Boolean).join(', '):'';
+  const normalize=value=>String(value||'').normalize('NFKC').toLocaleLowerCase('ru').replace(/ё/g,'е').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/gu,' ');
+  const streetKind=value=>{const type=normalize(value).split(' ')[0];if(['проспект','пр','avenue','ave'].includes(type))return'avenue';if(['улица','ул','street','st'].includes(type))return'street';return null};
+  const features=(data.features||[]).filter(feature=>{
+   const p=feature.properties||{};
+   if(target?.house&&normalize(p.housenumber)!==normalize(target.house))return false;
+   if(target?.street_name){const actual=normalize(p.street),wanted=normalize(target.street_name),actualKind=streetKind(p.street),wantedKind=streetKind(target.street_type);const actualName=actual.replace(/^(?:улица|ул|street|st|проспект|пр-т|пр|avenue|ave)\s+/u,'');if(actualName!==wanted|| (actualKind&&wantedKind&&actualKind!==wantedKind))return false}
+   if(city){const actual=normalize([p.city,p.district,p.state].filter(Boolean).join(' ')),wanted=normalize(city);if(!actual.includes(wanted))return false}
+   return true;
+  });
+  const items=features.map(feature=>{const p=feature.properties;return{...feature,label:[p.name,p.street,p.housenumber,p.city||p.district,p.state].filter(Boolean).join(', '),addressMatch:oldLabel&&newLabel?`${oldLabel} → ${newLabel}`:null}});
+  if(!items.length){const localResults=await searchOfflineMap(address,requestId);if(localResults.length){showResults(localResults,query,'geocode',autoSelectSingle);setStatus('Адрес найден в локальной карте. Выберите результат.');if(autoSelectSingle&&localResults.length===1)setStatus(addressSelectedStatus);return}}
+  showResults(items,query,'geocode',autoSelectSingle);
+  if(autoSelectSingle&&items.length===1)setStatus(addressSelectedStatus);
+  else if(items.length)setStatus(current?`Найден адрес. Старое название сопоставлено: ${oldLabel} → ${newLabel}. Выберите результат.`:'Выберите адрес из результатов поиска.');
+  else if(current)setStatus(`Старый адрес сопоставлен: ${oldLabel} → ${newLabel}. Онлайн-поиск не вернул координаты.`);
+  else setStatus('Адрес не найден. Проверьте город и номер дома или попробуйте название улицы.');
+ }catch(error){
+  if(requestId===searchRequest){const local=localAttempted?[]:await searchOfflineMap(address,requestId);if(local.length){showResults(local,query,'geocode',autoSelectSingle);setStatus('Найдено в локальной карте. Выберите результат.')}else{$('results').hidden=true;setStatus(`Адрес не найден в локальной карте. ${navigator.onLine?'Онлайн-поиск также недоступен. ':''}${error.message}`)}}
+ }
+}
+function onSearch(autoSelectSingle=false){
+ clearTimeout(searchTimer);const query=$('q').value.trim(),requestId=++searchRequest;
+ if(query.length<2){$('results').hidden=true;return}
+ const search=norm(query);
+ const matches=branches.filter(point=>norm([point.name,point.type,point.city,point.addr,point.hours].join(' ')).includes(search)).slice(0,16);
+ if(matches.length){showResults(matches,query,'local',autoSelectSingle);setStatus(`Найдено пунктов Jana Post: ${branches.filter(point=>norm([point.name,point.type,point.city,point.addr].join(' ')).includes(search)).length}. Выберите пункт.`);if(autoSelectSingle&&matches.length===1)setStatus(addressSelectedStatus);return}
+ searchTimer=setTimeout(()=>searchAddress(query,requestId,autoSelectSingle),350)
+}
+function decodePolyline(value){
+ let index=0,latitude=0,longitude=0,coordinates=[];
+ while(index<value.length){
+  let deltas=[];
+  for(let axis=0;axis<2;axis++){let byte,shift=0,result=0;do{byte=value.charCodeAt(index++)-63;result|=(byte&31)<<shift;shift+=5}while(byte>=32);deltas.push(result&1?~(result>>1):result>>1)}
+  latitude+=deltas[0];longitude+=deltas[1];coordinates.push([longitude/1e6,latitude/1e6])
+ }
+ return coordinates
+}
+async function route(){
+ if(!routeTarget){setStatus('Сначала выберите пункт выдачи или точку на карте.');return}
+ if(!navigator.geolocation){setStatus('Этот браузер не поддерживает определение вашего местоположения.');return}
+ $('route-button').disabled=true;setStatus('Определяем ваше местоположение…');
+ navigator.geolocation.getCurrentPosition(async position=>{
+  const origin=[position.coords.longitude,position.coords.latitude];
+  routeStartMarker?.remove();routeStartMarker=new maplibregl.Marker({color:BLUE}).setLngLat(origin).addTo(map);
+  try{
+   const request={locations:[{lon:origin[0],lat:origin[1]},{lon:routeTarget[0],lat:routeTarget[1]}],costing:'auto',language:'ru-RU'};
+   const options={method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(request)};
+   let response,error;
+   try{response=await fetch(CFG.route,options)}catch(cause){error=cause}
+   if(!response?.ok){
+    const localError=response?`локальный сервис: HTTP ${response.status}`:`локальный сервис: ${error.message}`;
+    try{response=await fetch('https://valhalla1.openstreetmap.de/route',options)}catch(cause){throw new Error(`${localError}; интернет-маршрутизатор: ${cause.message}`)}
+    if(!response.ok)throw new Error(`${localError}; интернет-маршрутизатор: HTTP ${response.status}`)
+   }
+   const data=await response.json(),leg=data.trip?.legs?.[0];if(!leg)throw new Error('Маршрут не найден.');
+   const coordinates=decodePolyline(leg.shape);map.getSource('route')?.setData({type:'Feature',geometry:{type:'LineString',coordinates}});
+   const bounds=new maplibregl.LngLatBounds();coordinates.forEach(coordinate=>bounds.extend(coordinate));
+   map.fitBounds(bounds,{padding:mapPadding(),maxZoom:15});
+   setStatus(`Маршрут построен: ${data.trip.summary.length.toFixed(1)} км, ${Math.round(data.trip.summary.time/60)} мин.`)
+  }catch(error){setStatus(`Маршрут требует подключения к онлайн-сервису: ${error.message}`)}
+  finally{$('route-button').disabled=false}
+ },error=>{$('route-button').disabled=false;setStatus(`Не удалось определить местоположение: ${error.message}. Разрешите доступ к геолокации.`)},{enableHighAccuracy:true,timeout:12000,maximumAge:60000})
+}
+function init(){
+ if(!window.maplibregl||!window.pmtiles){setStatus('Библиотека карты не загрузилась. Обновите страницу после подключения сервера.');return}
+ if(!branches.length){$('count').textContent='Список пунктов выдачи не загрузился.';setStatus('Не удалось загрузить web/assets/branches.js.');return}
+ maplibregl.addProtocol('pmtiles',new pmtiles.Protocol().tile);
+ const P=palette();
+ map=new maplibregl.Map({container:'map',center:CFG.center,zoom:4.7,minZoom:3,maxZoom:19,attributionControl:true,style:{
+  version:8,glyphs:CFG.glyphs,
+  sources:{
+   basemap:{type:'vector',url:`pmtiles://${CFG.tiles}`,attribution:'© OpenMapTiles © OpenStreetMap contributors'},
+   fallback:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}
+  },
+  layers:[
+   {id:'background',type:'background',paint:{'background-color':P.land}},
+   {id:'fallback',type:'raster',source:'fallback',paint:{'raster-brightness-max':P.rasterMax,'raster-saturation':P.rasterSat}},
+   {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':P.water}},
+   {id:'park',type:'fill',source:'basemap','source-layer':'park',paint:{'fill-color':P.park}},
+   {id:'building',type:'fill',source:'basemap','source-layer':'building',minzoom:14,paint:{'fill-color':P.building}},
+   {id:'road',type:'line',source:'basemap','source-layer':'transportation',filter:['!=','class','rail'],paint:{'line-color':P.road,'line-width':['interpolate',['exponential',1.5],['zoom'],8,.5,16,8]}},
+   {id:'road-label',type:'symbol',source:'basemap','source-layer':'transportation_name',minzoom:12,layout:{'symbol-placement':'line','text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':11},paint:{'text-color':P.roadLabel,'text-halo-color':P.halo,'text-halo-width':1.4}},
+   {id:'house-number',type:'symbol',source:'basemap','source-layer':'housenumber',minzoom:17,layout:{'text-field':['get','housenumber'],'text-font':['Noto Sans Regular'],'text-size':10},paint:{'text-color':P.house,'text-halo-color':P.halo,'text-halo-width':1}},
+   {id:'place-label',type:'symbol',source:'basemap','source-layer':'place',layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':['interpolate',['linear'],['zoom'],4,11,12,16]},paint:{'text-color':P.place,'text-halo-color':P.halo,'text-halo-width':1.5}}
+  ]
+ }});
+ map.on('sourcedata',event=>{
+  if(event.sourceId==='basemap'&&event.sourceDataType==='content'&&event.isSourceLoaded&&map.getLayer('fallback'))map.setLayoutProperty('fallback','visibility','none');
+ });
+ map.on('error',event=>{
+  if(event.sourceId==='basemap'||/PMTiles|magic number/i.test(event.error?.message||'')){
+   if(map.getLayer('fallback'))map.setLayoutProperty('fallback','visibility','visible');
+   setStatus('Офлайн-слой карты не загрузился; проверьте наличие data/kazakhstan.pmtiles и перезапустите сервер.')
+  }
+ });
+ map.once('style.load',()=>{
+  addMapLayers();renderCities();new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-accent']});matchMedia('(prefers-color-scheme:dark)').addEventListener?.('change',applyTheme);map.resize();flyToBounds(branches);
+  const branchesCount=branches.length,branchCount=branches.filter(point=>point.type==='Филиал').length,lockerCount=branchesCount-branchCount;
+  $('count').textContent=`${branchesCount} пунктов в ${cities.length} городах · ${branchCount} филиалов · ${lockerCount} постаматов`;
+  $('show-points').addEventListener('change',event=>{
+   const visibility=event.target.checked?'visible':'none';
+   for(const layer of ['pickup-clusters','pickup-cluster-count','pickup-points'])map.setLayoutProperty(layer,'visibility',visibility)
+  });
+  $('zoom-in').addEventListener('click',()=>map.zoomIn());$('zoom-out').addEventListener('click',()=>map.zoomOut());
+  $('show-kz').addEventListener('click',()=>flyToBounds(branches));
+  $('route-button').addEventListener('click',route);
+  $('q').addEventListener('input',onSearch);
+  $('q').addEventListener('keydown',event=>{if(event.key==='Escape')$('results').hidden=true});
+  const params=new URLSearchParams(location.search);let initialQuery=params.get('q');if(params.has('last')){try{const last=JSON.parse(sessionStorage.getItem('jp_last')||'null');initialQuery=last?.current_address?.display||last?.raw_address||[last?.city,last?.street_type,last?.street_name,last?.house].filter(Boolean).join(' ')}catch{}}if(initialQuery){$('q').value=initialQuery;onSearch(true) }
+  document.addEventListener('click',event=>{if(!event.target.closest('.search-wrap'))$('results').hidden=true});
+ });
+ }
+init();
+</script>
+<script src="assets/jarvis.js"></script>
+</body>
+</html>

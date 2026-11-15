@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f8f7">
+  <meta name="description" content="Рабочее пространство Jana Post для разбора и проверки адресов доставки.">
+  <title>Jana Post — разбор адресов доставки</title>
+  <link rel="stylesheet" href="/app.css?v=9">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Jana Post — главная">
+        <span class="brand-mark">J</span>
+        <span><strong>jana post</strong><small>ADDRESS INTELLIGENCE</small></span>
+      </a>
+      <div class="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
+      <nav class="main-nav" aria-label="Основная навигация">
+        <button class="nav-item active" data-view="addresses"><span class="nav-icon">⌑</span>Разбор адресов</button>
+        <button class="nav-item" data-view="map"><span class="nav-icon">⌖</span>Карта Казахстана</button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="offline-card">
+        <span class="status-dot"></span>
+        <div><strong>Локальная обработка</strong><small>Адреса остаются на вашем сервере</small></div>
+      </div>
+      <a class="sidebar-help" href="/README.md" target="_blank" rel="noreferrer">Документация <span>↗</span></a>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="breadcrumbs"><span>Jana Post</span><span class="crumb-divider">/</span><strong id="breadcrumb">Разбор адресов</strong></div>
+        <div class="topbar-right"><span class="api-status"><span id="api-dot" class="status-dot"></span><span id="api-label">Проверяем API…</span></span><span id="ollama-label" class="ai-status" hidden title="Статус локальной AI-модели">Проверяем Ollama…</span><span class="avatar">JP</span></div>
+      </header>
+
+      <section id="addresses-view" class="view">
+        <div class="page-heading">
+          <div><div class="eyebrow">ADDRESS INTELLIGENCE</div><h1>Разбор адресов</h1><p>Из неструктурированной строки — в готовую карточку доставки.</p></div>
+          <button id="download" class="button secondary" disabled><span>↓</span> Скачать результат</button>
+        </div>
+
+        <div class="metrics">
+          <article class="metric-card"><span class="metric-icon green">▤</span><div><span>Записей загружено</span><strong id="metric-total">0</strong></div></article>
+          <article class="metric-card"><span class="metric-icon green">✓</span><div><span>Высокая уверенность</span><strong id="metric-confident">0</strong></div></article>
+          <article class="metric-card"><span class="metric-icon amber">⌕</span><div><span>Нужна проверка</span><strong id="metric-review">0</strong></div></article>
+          <article class="metric-card"><span class="metric-icon blue">◈</span><div><span>Справочник</span><strong id="metric-catalog">Загрузка…</strong></div></article>
+        </div>
+
+        <section class="panel import-panel">
+          <div class="panel-heading"><div><span class="step-number">01</span><div><h2>Загрузите адреса</h2><p>JSON с массивом записей или объектом <code>{"records": [...]}</code></p></div></div><button id="sample" class="text-button">Вставить пример</button></div>
+          <div id="drop-zone" class="drop-zone">
+            <input id="file-input" type="file" accept=".json,application/json" hidden>
+            <span class="upload-icon">↑</span><div><strong>Перетащите JSON-файл сюда</strong><span>или <button id="choose-file" class="inline-button">выберите файл</button> на компьютере</span></div>
+            <span class="file-format">JSON</span>
+          </div>
+          <div class="single-entry"><label for="single-address">Или разберите одну строку</label><div class="single-input-row"><input id="single-address" type="text" placeholder="Например: Туран 55/6 магазин Береке 4 подъезд 9 этаж"><button id="parse-one" class="button primary">Разобрать</button></div></div>
+          <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+        </section>
+
+        <section class="panel results-panel">
+          <div class="panel-heading results-heading"><div><span class="step-number">02</span><div><h2>Проверьте результат</h2><p>Нажмите на значение, чтобы поправить его вручную.</p></div></div><label class="review-toggle"><input id="review-only" type="checkbox"><span class="toggle-track"></span>Низкая уверенность</label></div>
+          <div class="table-toolbar"><span id="results-count">Нет записей</span><label class="search-box"><span>⌕</span><input id="filter" type="search" placeholder="Поиск по адресу…"></label></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ИСХОДНЫЙ АДРЕС</th><th>ОБЛАСТЬ</th><th>ГОРОД</th><th>РАЙОН</th><th>ЖИЛМАССИВ</th><th>ТИП УЛИЦЫ</th><th>УЛИЦА</th><th>ДОМ</th><th>КВАРТИРА</th><th>ПОДЪЕЗД</th><th>ЭТАЖ</th><th>ОРИЕНТИР</th><th>УВЕРЕННОСТЬ</th></tr></thead>
+              <tbody id="results-body"><tr class="empty-row"><td colspan="13"><span class="empty-icon">⌑</span><strong>Здесь появятся разобранные адреса</strong><span>Загрузите JSON-файл или введите адрес выше.</span></td></tr></tbody>
+            </table>
+          </div>
+          <div class="table-footer"><span>Поля редактируются на месте</span><span>Исходные строки не изменяются</span></div>
+        </section>
+        <footer class="page-footer"><span>Jana Post · рабочее пространство адресов</span><span>Справочник Казахстана загружается локально при старте сервера</span></footer>
+      </section>
+
+      <section id="map-view" class="view map-view" hidden>
+        <div class="page-heading map-heading"><div><div class="eyebrow">GEOGRAPHIC CONTEXT</div><h1>Карта Казахстана</h1><p>Карта доступна отдельно от разбора и не меняет исходный адрес.</p></div><button id="open-map" class="button secondary">Открыть отдельно ↗</button></div>
+        <div class="map-frame-wrap"><iframe id="map-frame" title="Интерактивная карта Казахстана" loading="lazy"></iframe></div>
+        <div class="map-footnote"><span class="status-dot"></span>Карта и поиск улиц по локальным тайлам работают без интернета. Маршрут пока требует интернета; офлайн-маршрут потребует дорожный граф Valhalla.</div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="/app.js?v=9"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1a9114"><title>Проверка адреса — Jana Address</title>
+<script>(function(){try{var t=localStorage.getItem('jp_theme'),a=localStorage.getItem('jp_accent');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;if(a&&a!=='green')document.documentElement.dataset.accent=a;}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/site.css"></head><body>
+<div id="hdr"></div>
+<main><section class="sec" style="padding-top:36px"><div class="container">
+<div class="pagehead" style="padding-top:0"><h1 data-i18n="ck_h">Проверка адреса</h1>
+<p class="lead" data-i18n="ck_lead">Введите адрес так, как его написал клиент: с сокращениями, опечатками и слитным написанием. Подсказки улиц — как в 2ГИС.</p></div>
+<form class="field" id="f"><label for="q" class="sr">Адрес</label><input id="q" placeholder="Например: 66квартал 12дом 69квартира" data-i18n-ph="ck_ph" autocomplete="off"><button class="btn" type="submit" data-i18n="ck_btn">Разобрать</button></form>
+<div class="chips" id="chips"></div>
+<div id="out" aria-live="polite"></div>
+</div></section></main>
+<div id="ftr"></div>
+<script src="assets/i18n.js"></script><script src="assets/geo.js"></script><script src="assets/streets.js"></script><script src="assets/parser.js"></script><script src="assets/geocode.js"></script><script src="assets/site.js?v=offline-map-in-header"></script><script src="assets/suggest.js"></script>
+<script>
+const q=document.getElementById('q'),out=document.getElementById('out'),t=JP.t;
+if(window.JPSuggest)JPSuggest.attach(q,{onPick:()=>run()});
+const SAMPLES=JP.DEMO.map(d=>d.raw_address).concat(['Алматы, Алатауский район, мкр Шанырак-2, ул. Жандосова 12, кв 4','Назарбаева8','Боралдай, Qazpost Солнечный, 14']);
+document.getElementById('chips').innerHTML=SAMPLES.map((d,i)=>`<button type="button" class="chip" data-i="${i}">${JP.esc(d.length>38?d.slice(0,38)+'…':d)}</button>`).join('');
+document.getElementById('chips').onclick=e=>{const b=e.target.closest('.chip');if(b){q.value=SAMPLES[b.dataset.i];run()}};
+document.getElementById('f').onsubmit=e=>{e.preventDefault();run()};
+const val=(r,k)=>r[k]==null||r[k]===''?`<span class="null">${JP.esc(t('notset'))}</span>`:JP.esc(r[k]);
+const group=(g,keys,r)=>`<div class="panel"><h3>${JP.esc(t(g))}</h3><dl class="dl">${keys.map(k=>`<div><dt>${JP.FIELDS.find(f=>f[0]===k)[1]}</dt><dd>${val(r,k)}</dd></div>`).join('')}</dl></div>`;
+const currentAddress=r=>r.current_address?`<p class="note"><b>${JP.esc(t('current_addr'))}</b> ${JP.esc(r.current_address.display)}</p>`:'';
+const aiNotice=ai=>ai&&['used','partial'].includes(ai.status)&&ai.enhanced?`<p class="note">${JP.esc(t('ai_used'))}</p>`:'';
+const acts=r=>{const mapQuery=r.current_address?.display||r.raw_address||[r.city,r.street_type,r.street_name,r.house].filter(Boolean).join(', ');const canMap=Boolean(r.city||r.province||r.street_name);
+ return `<div class="row" style="margin-top:16px"><button class="btn ghost sm" id="cp" type="button">${JP.esc(t('cp_json'))}</button>${canMap?`<a class="btn ghost sm" href="map.html?q=${encodeURIComponent(mapQuery)}">${JP.esc(t('on_map'))}</a>`:''}<a class="btn ghost sm" target="_blank" rel="noopener" href="${JP.gis2(r)}">${JP.esc(t('open_2gis'))}</a></div>`};
+let lastRow=null;
+async function run(){
+ const v=q.value.trim();if(!v){JP.toast(t('ck_ph'));return}
+ const result=await JP.parse([{id:'single',raw_address:v}]),{rows,demo,error}=result;const r=rows[0],low=(r.confidence||0)<JP.LOW,pc=Math.round((r.confidence||0)*100);
+ lastRow=r;JP.store.setLast(r);
+ out.innerHTML=`<div class="res">${group('g_addr',['province','city','district','living_area','street_type','street_name','house'],r)}
+ <div style="display:grid;gap:18px;align-content:start">${group('g_det',['apartment','entrance','floor','landmark'],r)}
+ <div class="panel"><h3>${JP.esc(t('g_conf'))}</h3><div style="padding:14px 16px"><span class="conf ${low?'low':''}">${pc}%</span><div class="meter ${low?'low':''}"><i style="width:${pc}%"></i></div><p class="note">${JP.esc(low?t('conf_low'):t('conf_ok'))}</p></div></div></div></div>`
+ +(r.suggestions||[]).map((s,j)=>`<div class="sug"><b>${JP.esc(t('sug_t'))}</b> ${JP.esc(s.text)}<br><button class="btn ghost sm" style="margin-top:8px" data-j="${j}" type="button">${JP.esc(t('sug_apply'))}</button></div>`).join('')
+ +currentAddress(r)+aiNotice(result.ai)+acts(r)
+ +(demo?`<p class="note">${JP.esc(t('demo_note'))} ${JP.esc(error||'')}</p>`:'');
+}
+out.onclick=e=>{
+ const b=e.target.closest('[data-j]');
+ if(b&&lastRow){Object.assign(lastRow,lastRow.suggestions[b.dataset.j].patch);lastRow.confidence=Math.min(.95,(lastRow.confidence||0)+.2);delete lastRow.suggestions;JP.store.setLast(lastRow);q.value=lastRow.raw_address;renderRow()}
+ if(e.target.id==='cp'&&lastRow){const{suggestions,...c}=lastRow;navigator.clipboard&&navigator.clipboard.writeText(JSON.stringify(c,null,2)).then(()=>JP.toast('JSON ✓'),()=>JP.toast('×'))}
+};
+function renderRow(){const r=lastRow;
+ const low=(r.confidence||0)<JP.LOW,pc=Math.round(r.confidence*100);
+ out.innerHTML=`<div class="res">${group('g_addr',['province','city','district','living_area','street_type','street_name','house'],r)}<div style="display:grid;gap:18px;align-content:start">${group('g_det',['apartment','entrance','floor','landmark'],r)}<div class="panel"><h3>${JP.esc(t('g_conf'))}</h3><div style="padding:14px 16px"><span class="conf ${low?'low':''}">${pc}%</span><div class="meter ${low?'low':''}"><i style="width:${pc}%"></i></div></div></div></div></div>`+currentAddress(r)+acts(r)+`<p class="note">${JP.esc(t('applied'))}</p>`;
+ JP.toast(t('applied'))}
+const pq=new URLSearchParams(location.search).get('q');if(pq){q.value=pq;run()}
+</script>
+<script src="assets/jarvis.js"></script></body></html>

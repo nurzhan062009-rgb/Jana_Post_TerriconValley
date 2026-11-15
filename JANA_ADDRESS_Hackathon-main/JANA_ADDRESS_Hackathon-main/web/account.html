@@ -1,0 +1,211 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1a9114"><title>Личный кабинет — Jana Address</title>
+<script>(function(){try{var t=localStorage.getItem('jp_theme'),a=localStorage.getItem('jp_accent');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;if(a&&a!=='green')document.documentElement.dataset.accent=a;}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/site.css"></head><body>
+<div id="hdr"></div>
+<main><section class="sec" style="padding-top:36px"><div class="container">
+<div class="pagehead" style="padding-top:0"><h1 data-i18n="ac_h">Личный кабинет</h1>
+<p class="lead" data-i18n="ac_lead">Заказы, посылки, адреса и настройки сервиса — всё в одном месте. Демо-данные хранятся только в этом браузере.</p></div>
+<div id="auth"></div>
+<div id="prof" style="display:none"></div>
+</div></section></main>
+<div id="ftr"></div>
+<script src="assets/i18n.js"></script><script src="assets/geo.js"></script><script src="assets/streets.js"></script><script src="assets/parser.js"></script><script src="assets/geocode.js"></script><script src="assets/site.js?v=offline-map-in-header"></script><script src="assets/suggest.js"></script><script src="assets/branches.js"></script>
+<script>
+const $=id=>document.getElementById(id),{esc}=JP,t=JP.t,acc=JP.acc;
+const keyOf=p=>String(p||'').replace(/\D/g,'');
+const hash=s=>{let x=2166136261;for(let i=0;i<s.length;i++){x^=s.charCodeAt(i);x=Math.imul(x,16777619)}return(x>>>0)/4294967296};
+let tab='login',sec='over',openOrd=null;
+const SVG={
+ over:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+ addr:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+ ord:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>',
+ set:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .33 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.33 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.09a1.6 1.6 0 0 0-1-1.47 1.6 1.6 0 0 0-1.77.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .33-1.77 1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.09a1.6 1.6 0 0 0 1.47-1 1.6 1.6 0 0 0-.33-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.33h.01a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.09a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.33 1.77v.01a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.09a1.6 1.6 0 0 0-1.47 1z"/></svg>',
+ pin:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+ search:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ tbl:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>',
+ box:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>',
+ star:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.2-5.4-2.9-5.4 2.9 1-6.2L3.2 9.5l6.1-.9z"/></svg>',
+ truck:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17.5" cy="18" r="2"/></svg>',
+ gis:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2z"/><path d="M9 3v16M15 5v16"/></svg>'
+};
+const COURIERS=['Асхат К.','Дана С.','Ерлан Т.','Айгуль М.','Нурлан Б.','Жанна К.','Бауыржан А.','Мадина Ж.','Серик О.','Камила Р.'];
+const OS=['os_new','os_pick','os_way','os_point','os_done'];
+const OS_CLS=['new','','way','point','done'];
+
+/* ---------- вход / регистрация ---------- */
+function drawAuth(){
+ $('auth').innerHTML=`<div class="panel" style="max-width:460px"><div class="seg" role="group" style="margin-bottom:16px"><button type="button" data-t="login" aria-pressed="${tab==='login'}">${esc(t('lg_login'))}</button><button type="button" data-t="reg" aria-pressed="${tab==='reg'}">${esc(t('lg_reg'))}</button></div>
+ <form id="af" autocomplete="on">${tab==='reg'?`<div style="margin-bottom:12px"><label for="an">${esc(t('lg_name'))}</label><input id="an" required maxlength="60"></div>`:''}
+ <div style="margin-bottom:12px"><label for="ap">${esc(t('lg_phone'))}</label><input id="ap" type="tel" required placeholder="+7 7XX XXX XX XX" autocomplete="tel"></div>
+ <div><label for="aw">${esc(t('lg_pass'))}</label><input id="aw" type="password" required minlength="4" autocomplete="${tab==='reg'?'new-password':'current-password'}"></div>
+ <div class="row" style="margin-top:16px"><button class="btn" type="submit">${esc(tab==='reg'?t('lg_up'):t('lg_in'))}</button></div>
+ <p class="note">${esc(tab==='reg'?t('lg_note1'):t('lg_note2'))}</p></form></div>`;
+ $('auth').querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;drawAuth()});
+ $('af').onsubmit=async e=>{e.preventDefault();
+  const phone=keyOf($('ap').value),pw=$('aw').value;
+  if(phone.length<10){JP.toast(t('lg_phone_bad'));return}
+  const users=acc.usersGet(),h=await acc.hashPw(pw);
+  if(tab==='reg'){
+   if(users[phone]){JP.toast(t('lg_exists'));tab='login';drawAuth();return}
+   const name=($('an')?.value||'').trim();if(!name){JP.toast(t('lg_name_bad'));return}
+   users[phone]={name,phone,hash:h};acc.usersSet(users);acc.set({name,phone});
+   JP.toast(t('lg_welcome',{name}));sec='over';render();
+  }else{
+   const u=users[phone];
+   if(!u||u.hash!==h){JP.toast(t('lg_bad'));return}
+   acc.set({name:u.name,phone});JP.toast(t('lg_welcome',{name:u.name}));sec='over';render();
+  }};
+}
+
+/* ---------- адреса ---------- */
+function fmtAddr(a){
+ const p=[a.province&&a.province!==a.city?a.province:'',a.city,a.district?'р-н '+a.district:'',a.living_area?'мкр '+a.living_area:'',[a.street_type,a.street_name].filter(Boolean).join(' '),a.house?'дом '+a.house:'',a.apartment?'кв '+a.apartment:''].filter(Boolean).join(', ');
+ return p||null;
+}
+
+/* ---------- демо-заказы (детерминированно из адресов) ---------- */
+function orders(){
+ const me=acc.get();if(!me)return[];
+ const list=acc.addrsGet(),BR=window.JPBRANCHES||[],out=[];
+ list.forEach((a,i)=>{
+  for(let k=0;k<2;k++){
+   const sd=hash(me.phone+'|'+a.raw+'|'+i+'|'+k);
+   const sd2=hash(a.raw+'~'+k+'|'+me.phone);
+   const track='JP-'+String(1000+Math.floor(sd*9000))+'-'+String(1000+Math.floor(sd2*9000));
+   const si=k===0?(sd<.2?0:sd<.45?1:sd<.7?2:sd<.85?3:4):(sd2<.5?4:sd2<.75?2:3);
+   const created=new Date(Date.now()-Math.floor(sd*26+k*13+1)*864e5);
+   const from=BR.length?BR[Math.floor(sd2*BR.length)]:{name:'Jana Post',city:a.city||'',addr:''};
+   const dest=a.city||a.province||'';
+   out.push({track,a,i,k,si,created,from,dest,
+    courier:COURIERS[Math.floor(sd*6+sd2*4)%COURIERS.length],
+    weight:(0.4+Math.round(sd2*196)/10).toFixed(1),
+    paid:sd>.45,
+    eta:si>=4?null:new Date(created.getTime()+(2+Math.floor(sd*4))*864e5)});
+  }});
+ return out.sort((x,y)=>y.created-x.created);
+}
+const fmtD=d=>d.toLocaleDateString(JPI18N.lang==='kk'?'kk-KZ':JPI18N.lang==='en'?'en-GB':'ru-RU',{day:'2-digit',month:'short'});
+function orderCard(o){
+ const st=o.si,open=openOrd===o.track;
+ return `<div class="order" id="ord_${o.track}">
+ <div class="otop"><div><span class="oid">${o.track}</span> <span class="odate">${fmtD(o.created)}</span></div>
+ <span class="badge ${OS_CLS[st]}">${esc(t(OS[st]))}</span></div>
+ <div class="track">${OS.map((s,j)=>`<span class="st ${j<=st?'on':''}"><i></i>${esc(t(s))}</span>`).join('')}</div>
+ <div class="odl"><div><span>${esc(t('ord_from'))}</span><b>${esc(o.from.name)}${o.from.city?' · '+esc(o.from.city):''}</b></div>
+ <div><span>${esc(t('ord_to'))}</span><b>${esc(o.a.raw.length>46?o.a.raw.slice(0,46)+'…':o.a.raw)}</b></div>
+ <div><span>${esc(t('ord_courier'))}</span><b>${esc(o.courier)}</b></div>
+ <div><span>${esc(t('ord_weight'))}</span><b>${o.weight} кг</b></div>
+ <div><span>${esc(t('ord_pay'))}</span><b>${esc(o.paid?t('ord_paid'):t('ord_cash'))}</b></div>
+ ${o.eta?`<div><span>${esc(t('ord_eta'))}</span><b>${fmtD(o.eta)}</b></div>`:''}</div>
+ <div class="row" style="margin-top:12px">
+ ${o.dest?`<a class="btn ghost sm" href="map.html?focus=${encodeURIComponent(o.dest)}">${SVG.pin} ${esc(t('ord_map'))}</a>`:''}
+ <a class="btn ghost sm" target="_blank" rel="noopener" href="https://2gis.kz/search/${encodeURIComponent([o.from.addr,o.from.city].filter(Boolean).join(', '))}">${SVG.gis} ${esc(t('ord_2gis'))}</a>
+ <button class="btn ghost sm" type="button" data-more="${o.track}">${esc(open?t('ord_less'):t('ord_more'))}</button></div>
+ ${open?`<div class="odl" style="margin-top:10px"><div><span>${esc(t('ord_branch'))}</span><b>${esc(o.from.addr||o.from.name)}</b></div>
+ <div><span>${esc(t('th_conf'))}</span><b>${Math.round(Math.max(o.a.confidence||0,.85)*100)}%</b></div>
+ ${fmtAddr(o.a)?`<div style="grid-column:1/-1"><span>${esc(t('ord_to'))}</span><b>${esc(fmtAddr(o.a))}</b></div>`:''}</div>`:''}</div>`;
+}
+
+/* ---------- вкладки ---------- */
+function secOver(me,list,ord){
+ const inWay=ord.filter(o=>o.si===1||o.si===2).length;
+ const bonus=Math.round(340+hash(me.phone)*660);
+ return `<div class="hero-card"><div class="who"><div class="avatar">${esc(me.name.slice(0,2).toUpperCase())}</div>
+ <div style="flex:1"><h2>${esc(t('over_hello',{name:me.name}))}</h2><p>${esc(t('over_note',{phone:me.phone}))}</p></div>
+ <button class="btn ghost sm" id="out" type="button" style="color:#fff;border-color:rgba(255,255,255,.7)">${esc(t('over_out'))}</button></div></div>
+ <div class="dstats">
+ <div class="dstat"><b>${list.length}</b><span>${esc(t('over_stat1'))}</span><div class="ic">${SVG.pin}</div><div class="bar"><i style="width:${Math.min(100,list.length*25)}%"></i></div></div>
+ <div class="dstat"><b>${ord.length}</b><span>${esc(t('over_stat2'))}</span><div class="ic">${SVG.box}</div><div class="bar"><i style="width:${Math.min(100,ord.length*12)}%"></i></div></div>
+ <div class="dstat"><b>${inWay}</b><span>${esc(t('over_stat3'))}</span><div class="ic">${SVG.truck}</div><div class="bar"><i style="width:${ord.length?Math.round(inWay/ord.length*100):0}%"></i></div></div>
+ <div class="dstat"><b>${bonus}</b><span>${esc(t('over_stat4'))}</span><div class="ic">${SVG.star}</div><div class="bar"><i style="width:${Math.min(100,bonus/10)}%"></i></div></div></div>
+ <h3 style="margin:22px 0 0">${esc(t('over_quick'))}</h3>
+ <div class="qacts">
+ <a class="qact" href="check.html">${SVG.search} ${esc(t('q_check'))}</a>
+ <a class="qact" href="map.html">${SVG.pin} ${esc(t('q_map'))}</a>
+ <a class="qact" href="batch.html">${SVG.tbl} ${esc(t('q_batch'))}</a>
+ <button class="qact" type="button" id="qtrack">${SVG.box} ${esc(t('q_track'))}</button></div>
+ ${ord.length?`<h3 style="margin:22px 0 0">${esc(t('ord_h'))}</h3>${ord.slice(0,2).map(orderCard).join('')}`:''}`;
+}
+function secAddr(list){
+ return `<div class="panel" style="max-width:720px"><h3>${esc(t('addr_h'))}</h3>
+ <p class="note" style="margin:0 0 10px">${esc(t('addr_note'))}</p>
+ <form class="field" id="adf"><label class="sr" for="ad">${esc(t('addr_h'))}</label><input id="ad" data-i18n-ph="addr_ph" placeholder="${esc(t('addr_ph'))}" autocomplete="off"><button class="btn" type="submit">${esc(t('addr_save'))}</button></form>
+ <div id="alist">${list.length?list.map((a,i)=>`<div class="panel" style="margin-top:12px"><b>${esc(a.raw)}</b>
+ ${fmtAddr(a)?`<p class="note" style="margin:6px 0 0">${esc(fmtAddr(a))}</p>`:''}
+ <div class="row" style="margin-top:10px"><a class="btn ghost sm" href="check.html?q=${encodeURIComponent(a.raw)}">${esc(t('addr_check'))}</a>
+ ${a.city||a.province?`<button class="btn ghost sm" type="button" data-map="${i}">${esc(t('addr_map'))}</button>`:''}
+ <button class="btn ghost sm" type="button" data-add="${i}">${esc(t('addr_add'))}</button>
+ <button class="btn ghost sm" type="button" data-del="${i}">${esc(t('addr_del'))}</button></div></div>`).join(''):`<p class="note">${esc(t('addr_none'))}</p>`}</div></div>`;
+}
+function secOrd(ord){
+ return `<div class="panel" style="max-width:760px"><h3>${esc(t('ord_track_h'))}</h3>
+ <form class="field" id="trkf" style="margin-top:8px"><label class="sr" for="trk">${esc(t('ord_track_h'))}</label><input id="trk" placeholder="${esc(t('ord_track_ph'))}" autocomplete="off"><button class="btn" type="submit">${esc(t('ord_track_btn'))}</button></form>
+ <p class="note">${esc(t('ord_note'))}</p></div>
+ ${ord.length?ord.map(orderCard).join(''):`<div class="panel" style="max-width:760px;margin-top:14px"><p class="note" style="margin:0">${esc(t('addr_none'))}</p></div>`}`;
+}
+function secSet(){
+ const th=JP.prefs.theme,ac=JP.prefs.accent,lang=JPI18N.lang,txt=localStorage.getItem('jv_mode')==='text';
+ const seg=(id,opts,cur)=>`<div class="seg" role="group" id="${id}">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${v===cur}">${esc(l)}</button>`).join('')}</div>`;
+ return `<div class="panel" style="max-width:720px"><h3>${esc(t('set_h'))}</h3>
+ <div class="setrow"><div class="lb">${esc(t('set_lang'))}</div>${seg('slang',[['ru',t('lang_ru')],['kk',t('lang_kk')],['en',t('lang_en')]],lang)}</div>
+ <div class="setrow"><div class="lb">${esc(t('set_theme'))}</div>${seg('stheme',[['light',t('th_light')],['dark',t('th_dark')],['sys',t('th_sys')]],th)}</div>
+ <div class="setrow"><div class="lb">${esc(t('set_accent'))}</div>
+ <div class="swatches" id="sacc">
+ <button type="button" data-v="green" title="${esc(t('ac_green'))}" aria-pressed="${ac==='green'}" style="background:#1a9114"></button>
+ <button type="button" data-v="blue" title="${esc(t('ac_blue'))}" aria-pressed="${ac==='blue'}" style="background:#2f7fe0"></button>
+ <button type="button" data-v="sun" title="${esc(t('ac_sun'))}" aria-pressed="${ac==='sun'}" style="background:#e0862f"></button>
+ <button type="button" data-v="violet" title="${esc(t('ac_violet'))}" aria-pressed="${ac==='violet'}" style="background:#7a4fe0"></button></div></div>
+ <div class="setrow"><div class="lb">${esc(t('set_voice'))}<small>${esc(t('set_voice_note'))}</small></div>${seg('svoice',[['voice',t('vm_voice')],['text',t('vm_text')]],txt?'text':'voice')}</div>
+ <div class="setrow"><div class="lb">${esc(t('over_out'))}</div><button class="btn ghost sm" id="out2" type="button">${esc(t('over_out'))}</button></div></div>`;
+}
+
+/* ---------- рендер ---------- */
+function render(){
+ const me=acc.get();
+ $('auth').style.display=me?'none':'';$('prof').style.display=me?'block':'none';
+ if(!me){drawAuth();return}
+ const list=acc.addrsGet(),ord=orders();
+ const tabs=[['over',t('tab_over'),SVG.over],['addr',t('tab_addr'),SVG.addr],['ord',t('tab_ord'),SVG.ord],['set',t('tab_set'),SVG.set]];
+ $('prof').innerHTML=`<div class="dash"><nav class="dmenu" aria-label="${esc(t('ac_h'))}">
+ ${tabs.map(([v,l,ic])=>`<button type="button" data-s="${v}" ${v===sec?'aria-current="true"':''}>${ic} ${esc(l)}</button>`).join('')}</nav>
+ <div id="dcontent">${sec==='over'?secOver(me,list,ord):sec==='addr'?secAddr(list):sec==='ord'?secOrd(ord):secSet()}</div></div>`;
+ wire(me,list,ord);
+}
+function wire(me,list,ord){
+ document.querySelectorAll('.dmenu button').forEach(b=>b.onclick=()=>{sec=b.dataset.s;openOrd=null;render()});
+ const out=$('out')||$('out2');if(out)out.onclick=()=>{acc.set(null);JP.toast(t('lg_out'));render()};
+ const qt=$('qtrack');if(qt)qt.onclick=()=>{sec='ord';render();setTimeout(()=>$('trk')&&$('trk').focus(),60)};
+ if($('ad')&&window.JPSuggest)JPSuggest.attach($('ad'),{});
+ const adf=$('adf');if(adf)adf.onsubmit=async e=>{e.preventDefault();const v=$('ad').value.trim();if(!v){JP.toast(t('addr_ph'));return}
+  const x=await JP.parse([{id:'me_'+Date.now(),raw_address:v}]);const r=x.rows[0];
+  const {id,raw_address,...f}=r;const l2=acc.addrsGet();
+  const at=l2.findIndex(a=>a.raw.toLowerCase()===v.toLowerCase());if(at>=0)l2.splice(at,1);
+  l2.unshift({raw:v,...f});acc.addrsSet(l2);
+  JP.toast(t('addr_saved')+((r.confidence||0)<JP.LOW?' · '+t('conf_low'):''));render()};
+ const al=$('alist');if(al)al.onclick=e=>{const b=e.target.closest('button[data-map],button[data-add],button[data-del]');if(!b)return;
+  const l2=acc.addrsGet();const i=+(b.dataset.del??b.dataset.map??b.dataset.add);const a=l2[i];if(!a)return;
+  if(b.hasAttribute('data-del')){l2.splice(i,1);acc.addrsSet(l2);render();JP.toast(t('addr_del_ok'));return}
+  const rec={id:'my_'+i,raw_address:a.raw,confidence:Math.max(a.confidence||0,.9)};JP.FIELDS.forEach(([k])=>rec[k]=a[k]??null);
+  if(b.hasAttribute('data-map')){JP.store.setLast(rec);location.href='map.html?last=1';return}
+  const rows=JP.store.get();rows.push({...rec,_e:false});JP.store.set(rows);JP.toast(t('addr_added'))};
+ const tf=$('trkf');if(tf)tf.onsubmit=e=>{e.preventDefault();
+  const v=$('trk').value.trim().toUpperCase();
+  const o=ord.find(x=>x.track.toUpperCase()===v.replace(/\s/g,''));
+  if(!o){JP.toast(t('ord_track_no'));return}
+  openOrd=o.track;render();
+  setTimeout(()=>{const el=$('ord_'+o.track);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.style.boxShadow='0 0 0 3px var(--green)';setTimeout(()=>el.style.boxShadow='',1800)}},80)};
+ const sl=$('slang');if(sl)sl.querySelectorAll('button').forEach(b=>b.onclick=()=>JPI18N.set(b.dataset.v));
+ const st=$('stheme');if(st)st.querySelectorAll('button').forEach(b=>b.onclick=()=>{JP.prefs.theme=b.dataset.v;render()});
+ const sa=$('sacc');if(sa)sa.querySelectorAll('button').forEach(b=>b.onclick=()=>{JP.prefs.accent=b.dataset.v;render()});
+ const sv=$('svoice');if(sv)sv.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  const want=b.dataset.v,cur=localStorage.getItem('jv_mode')==='text'?'text':'voice';
+  if(want!==cur){const mb=document.getElementById('jv-mode');if(mb)mb.click();else try{localStorage.setItem('jv_mode',want)}catch(e){}}
+  render()});
+ const mo=$('dcontent');if(mo)mo.onclick=e=>{
+  const b=e.target.closest('[data-more]');if(!b)return;
+  openOrd=openOrd===b.dataset.more?null:b.dataset.more;render()};
+}
+render();
+const qp=new URLSearchParams(location.search);if(qp.get('tab')&&acc.get()){sec=qp.get('tab');render()}
+</script>
+<script src="assets/jarvis.js"></script></body></html>
